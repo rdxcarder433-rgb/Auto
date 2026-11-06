@@ -128,7 +128,10 @@ async def autoshopify(url, card, session):
             print(json.dumps(output))
             return output
         cc,mes,ano,cvv = parts
-        request = await session.get(f"{url}/products.json")
+        request = await session.get(
+    f"{url}/products.json", 
+    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'}
+)
         found = get_product_id(request)
         if not found:
             try:
