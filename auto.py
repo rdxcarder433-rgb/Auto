@@ -3,6 +3,8 @@ import json
 import re
 import time
 from urllib.parse import urlparse
+from flask import Flask, request, jsonify
+import httpx
 
 C2C = {
     "USD": "US",
@@ -26,7 +28,6 @@ book = {
     "AU": {"address1": "1 Martin Place", "city": "Sydney", "postalCode": "2000", "zoneCode": "NSW", "countryCode": "AU", "phone": "291234567"},
     "DEFAULT": {"address1": "123 Main", "city": "New York", "postalCode": "10080", "zoneCode": "NY", "countryCode": "US", "phone": "2194157586"},
 }
-
 
 def pick_addr(url, cc=None, rc=None):
     cc = (cc or "").upper()
@@ -52,7 +53,6 @@ def _json(resp):
     except Exception:
         return {}
 
-
 def capture(data, first, last):
     try:
         start = data.index(first) + len(first)
@@ -60,7 +60,6 @@ def capture(data, first, last):
         return data[start:end]
     except ValueError:
         return None
-
 
 def capture_any(data, patterns):
     for first, last in patterns:
@@ -169,7 +168,6 @@ async def autoshopify(url, card, session):
             })
             print(json.dumps(output))
             return output
-        # print(f"{product_id}\n{price}\n{site_key}")
 
         headers = {
             'accept': 'application/json',
@@ -222,7 +220,6 @@ async def autoshopify(url, card, session):
             })
             print(json.dumps(output))
             return output
-        # print(checkout_url)
 
         headers = {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -243,7 +240,6 @@ async def autoshopify(url, card, session):
         }
 
         request = await session.get(checkout_url, headers=headers, params=params, follow_redirects=True)
-        # open("guga.html","w").write(request.text)
         
         paymentMethodIdentifier = capture_any(request.text, [
             ("paymentMethodIdentifier&quot;:&quot;", "&quot;"),
@@ -353,12 +349,6 @@ async def autoshopify(url, card, session):
             tax = "0.00"
 
         addr = pick_addr(url, cc=currencyCode, rc=countryCode)
-        # print(addr["postalCode"])
-        # print(addr["address1"])
-        # print(addr["city"])
-        # print(addr["zoneCode"])
-        # print(addr["phone"])
-        # print(addr["countryCode"])
 
         headers = {
             'authority': 'checkout.pci.shopifyinc.com',
@@ -366,7 +356,6 @@ async def autoshopify(url, card, session):
             'accept-language': 'en-IN,en-GB;q=0.9,en-US;q=0.8,en;q=0.7',
             'content-type': 'application/json',
             'origin': 'https://checkout.pci.shopifyinc.com',
-            #'referer': 'https://checkout.pci.shopifyinc.com/build/d3eb175/number-ltr.html?identifier=&locationURL=',
             'sec-ch-ua': '"Chromium";v="137", "Not/A)Brand";v="24"',
             'sec-ch-ua-mobile': '?1',
             'sec-ch-ua-platform': '"Android"',
@@ -400,7 +389,6 @@ async def autoshopify(url, card, session):
             })
             print(json.dumps(output))
             return output
-        # print(f"{paymentMethodIdentifier}\n{stable_id}\n{queue_token}\n{x_checkout_one_session_token}\n{token}\n{web_build}\n{sessionid}\nCurrency Code: {currencyCode}\nCountry Code:{countryCode}\nRaw Tax: {tax}\nGate: {gateway}")
         await asyncio.sleep(0.1)
 
         headers = {
@@ -604,18 +592,12 @@ async def autoshopify(url, card, session):
             matches = re.findall(r'"deliveryMethodTypes"\s*:\s*\[(.*?)\]', request.text)
             DMT = matches[0] if matches else 'SHIPPING'
             DMT = DMT.replace('"', '')
-            # print(DMT)
 
         dmt_list = [p.strip().strip('"') for p in (DMT or "").replace('&quot;', '"').split(',') if p.strip().strip('"')]
         if not dmt_list:
             dmt_list = ['SHIPPING']
 
-        # print(f"Delivery Methods : {DMT}")
         await asyncio.sleep(0.1)
-
-        # print(f"Total Tax: {ttax}")
-
-        # open("test.html","w").write(request.text)
 
         headers = {
             'authority': domain,
@@ -812,8 +794,6 @@ async def autoshopify(url, card, session):
                 break
             else:
                 continue
-        # open("test.html","w").write(request.text)
-        # print(request.json())
 
         seller_data = _json(request)
         try:
@@ -827,7 +807,6 @@ async def autoshopify(url, card, session):
             })
             print(json.dumps(output))
             return output
-        # total = price+float(amount)+float(ttax)
         try:
             total = price + float(amount) + float(ttax)
         except (TypeError, ValueError):
@@ -844,13 +823,7 @@ async def autoshopify(url, card, session):
             print(json.dumps(output))
             return output
 
-        # print(f"Handle: {handle}\nAmount: {amount}\nTotal Price: {total}")
         await asyncio.sleep(0.1)
-
-        # delivery = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["deliveryExpectations"]["deliveryExpectations"]
-        #signedHandle1 = delivery[0]["signedHandle"]
-#		signedHandle2 = delivery[1]["signedHandle"]
-#		signedHandle3 = delivery[2]["signedHandle"]
 
         headers = {
             'authority': domain,
@@ -894,24 +867,7 @@ async def autoshopify(url, card, session):
                     'delivery': {
                         'deliveryLines': [
                             {
-                                # 'destination': {
-                                #     'streetAddress': {
-                                #         'address1': addr["address1"],
-                                #         'city': addr["city"],
-                                #         'countryCode': addr["countryCode"],
-                                #         'postalCode': addr["postalCode"],
-                                #         'firstName': 'Laka',
-                                #         'lastName': 'Lama',
-                                #         'zoneCode': addr["zoneCode"],
-                                #         'phone': addr["phone"],
-                                #         'oneTimeUse': False,
-                                #     },
-                                # },
                                 'selectedDeliveryStrategy': {
-                                    # 'deliveryStrategyByHandle': {
-                                    #     'handle': handle,
-                                    #     'customDeliveryRate': False,
-                                    # },
                                     'deliveryStrategyMatchingConditions': {
                                         'estimatedTimeInTransit': {
                                             'any': True,
@@ -1133,14 +1089,6 @@ async def autoshopify(url, card, session):
                                         'handle': handle,
                                         'customDeliveryRate': False,
                                     },
-                                    # 'deliveryStrategyMatchingConditions': {
-                                    #     'estimatedTimeInTransit': {
-                                    #         'any': True,
-                                    #     },
-                                    #     'shipments': {
-                                    #         'any': True,
-                                    #     },
-                                    # },
                                     'options': {
                                         'phone': '12195154586',
                                     },
@@ -1335,8 +1283,7 @@ async def autoshopify(url, card, session):
                 break
             if "TAX_NEW_TAX_VALUE_MUST_BE_ACCEPTED" in text or "CAPTCHA_METADATA_MISSING" in text:
                 break
-        # print(request.json())
-        # open("test.html","w").write(response.text)
+            
         if "TAX_NEW_TAX_VALUE_MUST_BE_ACCEPTED" in request.text:
             output.update({
                 "Response": "TAX ⚠️",
@@ -1357,7 +1304,6 @@ async def autoshopify(url, card, session):
             print(json.dumps(output))
             return output
 
-        # receipt_id = request.json()["data"]["submitForCompletion"]["receipt"]["id"]
         jsun = _json(request)
         receipt = (((jsun.get("data") or {}).get("submitForCompletion")) or {}).get("receipt") or {}
         receipt_id = receipt.get("id") if isinstance(receipt, dict) else None
@@ -1371,10 +1317,7 @@ async def autoshopify(url, card, session):
             print(json.dumps(output))
             return output
 
-        # print(f"{receipt_id}")
-        
         await asyncio.sleep(0.5)
-
 
         headers = {
             'authority': domain,
@@ -1416,7 +1359,6 @@ async def autoshopify(url, card, session):
             request = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data)
             if i == 1:
                 pass  
-                # print(request.text)
             else:
                 await asyncio.sleep(3)
         
@@ -1424,52 +1366,10 @@ async def autoshopify(url, card, session):
         timetaken = end - start
         print(f"Time taken: {timetaken:.2f}s")
 
-
-
         res_json = _json(request)
         processing_error = ((res_json.get('data') or {}).get('receipt') or {}).get('processingError') or {}
         result = processing_error.get('code') if isinstance(processing_error, dict) else None
 
-        # if "shopify_payments" in str(res_json):
-        #     return "ORDER_CONFIRMED"
-        # if  result  == 'CARD_DECLINED':
-        #     return "CARD_DECLINED"
-        # elif  result  == 'INCORRECT_NUMBER':
-        #     return "INCORRECT_NUMBER ⚠️"
-        # elif  result  == 'GENERIC_ERROR':
-        #     return "GENERIC_ERROR ⚠️"
-        # elif result == 'AUTHENTICATION_FAILED':
-        #     return "3DS"
-        # elif "FRAUD_SUSPECTED" in str(res_json):
-        #     return "FRAUD_SUSPECTED"
-        # elif "INCORRECT_ADDRESS" in str(res_json):
-        #     return "MISMATCHED_BILLING"
-        # elif "INCORRECT_ZIP" in str(res_json):
-        #     return "MISMATCHED ZIP"
-        # elif "INCORRECT_PIN" in str(res_json):
-        #     return "MISMATCHED_PIN"
-        # elif "insufficient_funds" in str(res_json):
-        #     return "INSUFFICIENT_FUNDS"
-        # elif "INSUFFICIENT_FUNDS" in str(res_json):
-        #     return "INSUFFICIENT_FUNDS"
-        # elif "INVALID_CVC" in str(res_json):
-        #     return "INVALID_CVC"
-        # elif "INCORRECT_CVC" in str(res_json):
-        #     return "INCORRECT_CVC"        
-        # if "CompletePaymentChallenge" in str(res_json):
-        #     return "3DS REQUIRED"
-        # elif result:
-        #     return result
-        # else:
-        #     return "MISMATCHED_BILL" 
-        
-        # output.update({
-        #     "Response": result,
-        #     "Status": True,
-        #     "Gateway": gateway,
-        #     "Price": total,
-        #     "cc": card
-        # })
         if "shopify_payments" in str(res_json):
             output.update({
                 "Response": "ORDER_PLACED",
@@ -1583,7 +1483,6 @@ async def autoshopify(url, card, session):
                 "cc": card
             })
 
-
     except Exception as e:
         err = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
         output.update({
@@ -1594,18 +1493,9 @@ async def autoshopify(url, card, session):
     print(json.dumps(output))
     return output
 
-# async def main():
-#     async with httpx.AsyncClient() as session:
-#         await autoshopify("https://assoparentscfbl.org.uk/", "5294152852713430|07|25|951", session)
 
-# if __name__ == "__main__":
-#     asyncio.run(main())���������������������������������������������������������������������������������������������������������������������������������������������������api2_server.py��������������������������������������������������������������������������������������0000644�0000000�0000000�00000005444�15266053646�012373� 0����������������������������������������������������������������������������������������������������ustar  �root����������������������������root�������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������import asyncio
-from flask import Flask, request, jsonify
-import httpx
-#from api2 import autoshopify
-
+# Flask Setup
 app = Flask(__name__)
-
 
 def build_proxy(proxy_str):
     if not proxy_str:
@@ -1618,13 +1508,11 @@ def build_proxy(proxy_str):
         return f"http://{proxy_str}"
     return None
 
-
 async def run_check(url, card, proxy=None):
     async with httpx.AsyncClient(
         timeout=90, follow_redirects=True, proxy=build_proxy(proxy)
     ) as session:
         return await autoshopify(url, card, session)
-
 
 def do_check():
     args = request.args
@@ -1655,23 +1543,19 @@ def do_check():
         out = {"Response": err, "Status": False}
     return jsonify(out)
 
-
 @app.get("/shopify")
 @app.post("/shopify")
 def shopify():
     return do_check()
-
 
 @app.get("/check")
 @app.post("/check")
 def check():
     return do_check()
 
-
 @app.get("/health")
 def health():
     return jsonify({"status": "ok", "service": "api2"})
-
 
 @app.get("/")
 def index():
@@ -1684,14 +1568,12 @@ def index():
         },
     })
 
-
 @app.after_request
 def cors(resp):
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return resp
-
 
 @app.errorhandler(404)
 def not_found(e):
@@ -1701,17 +1583,13 @@ def not_found(e):
         "hint": "GET /shopify?cc=CARD&site=URL&proxy=host:port:user:pass",
     }), 404
 
-
 @app.errorhandler(405)
 def method_not_allowed(e):
     return jsonify({"Response": "METHOD NOT ALLOWED", "Status": False}), 405
-
 
 @app.errorhandler(500)
 def server_error(e):
     return jsonify({"Response": "SERVER ERROR", "Status": False}), 500
 
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8899, threaded=True)
-��������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������
